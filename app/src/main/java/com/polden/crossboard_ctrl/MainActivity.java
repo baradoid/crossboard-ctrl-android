@@ -41,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
     DeviceScanThread devScanThread = null;
     UdpServerThread udpServThr = null;
 
-    List<ReceiverParams> recvsList = Collections.synchronizedList(new ArrayList<ReceiverParams>());
 
     DatagramSocket udpSocket = null;
 
@@ -233,15 +232,15 @@ public class MainActivity extends AppCompatActivity {
                 iHeadTemp = Integer.parseInt(lastString.substring(10, 14), 10);
                 iDistance = Integer.parseInt(lastString.substring(15, 19), 10);
                 cashCount = Integer.parseInt(lastString.substring(40, 46), 10);
-                for(ReceiverParams rp : recvsList){
-                    String str = new String(lastString);
-                    DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), rp.addr, rp.port);
-                    udpSocket.send(packet);
-                }
+//                for(ReceiverParams rp : recvsList){
+//                    String str = new String(lastString);
+//                    DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), rp.addr, rp.port);
+//                    udpSocket.send(packet);
+//                }
             }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
+//            catch (IOException e) {
+//                e.printStackTrace();
+//            }
             catch (Exception e) {
 
             }
@@ -270,22 +269,7 @@ public class MainActivity extends AppCompatActivity {
             else if(msg.obj.getClass().equals(ReceiverParams.class)){
                 ReceiverParams rp = (ReceiverParams) msg.obj;
                 appendTextToTextView("registr: " + rp.addr.toString() + ",  port:" + rp.port + "\n");
-                recvsList.add(rp);
-
-
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        try  {
-//                            String s = new String("b b b b");
-//                            DatagramPacket packet = new DatagramPacket(s.getBytes(), s.length(), rp.addr, rp.port);
-//                            udpSocket.send(packet);
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                }).start();
-
+                ftReadThread.appendReceiver(rp);
             }
 
         }

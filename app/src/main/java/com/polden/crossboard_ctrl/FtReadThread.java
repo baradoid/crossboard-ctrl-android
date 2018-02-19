@@ -37,6 +37,8 @@ public class FtReadThread extends Thread {
     volatile int iPluginVer = 0x0914;
     private int cashCount = 0;
 
+    List<ReceiverParams> recvsList = Collections.synchronizedList(new ArrayList<ReceiverParams>());
+
 
     FtReadThread(FT_Device ft, Handler h){
         mHandler = h;
@@ -49,7 +51,7 @@ public class FtReadThread extends Thread {
     public void run()
     {
         //int i;
-        int pollPeroiod = 5;
+        int pollPeroiod = 2;
         byte[] dataBuf = new byte[readLength];
         char charBuf[] = new char[200];
         int curMsgInd = 0;
@@ -63,28 +65,28 @@ public class FtReadThread extends Thread {
         int cpuTempSendPeriod = 2000;
 
         ftDev.setLatencyTimer((byte)1);
+        DatagramSocket udpSocket = null;
+        try {
+            udpSocket = new DatagramSocket();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            Message message = mHandler.obtainMessage(0, e.toString());
+            mHandler.sendMessage(message);
 
+        }
 
-
-
+        int iavail;
         while(true == bReadThreadGoing)
         {
             synchronized(ftDev)
             {
-                int iavail = ftDev.read(dataBuf, readLength, pollPeroiod);
-                for (int i = 0; i < iavail; i++) {
-                    msg[curMsgInd] = (char)dataBuf[i];
-                    if((msg[curMsgInd++] == '\n') || (curMsgInd >= 199)){
-                        curMsgInd=0;
-                        //parseMessage(msg);
-                        //parseMessage(msgStr);
-                    }
-                }
-
-                if (iavail > 0) {
+                iavail = ftDev.getQueueStatus();
+                if(iavail > 0){
                     if(iavail > readLength){
                         iavail = readLength;
                     }
+                    ftDev.read(dataBuf, iavail);
 
                     for (int i = 0; i < iavail; i++) {
                         charBuf[curMsgInd] = (char)dataBuf[i];
@@ -94,33 +96,47 @@ public class FtReadThread extends Thread {
                             curMsgInd=0;
                         }
                     }
-
                     if(charMsgReadyBuf != null){
-                        Message message = mHandler.obtainMessage(0, new String(charMsgReadyBuf));
-                        mHandler.sendMessage(message);
+//                        Message msg = mHandler.obtainMessage(0, new String(charMsgReadyBuf));
+//                        mHandler.sendMessage(msg);
+                        
+                        if((udpSocket != null) && (recvsList.isEmpty()==false)) {
+                            String str = new String(charMsgReadyBuf);
+                            DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length());
+                            try {
+                                for (ReceiverParams rp : recvsList) {
+                                    packet.setAddress(rp.addr);
+                                    packet.setPort(rp.port);
+                                    udpSocket.send(packet);
+                                }
+                            }
+                            catch(IOException e){
 
+                            }
+                        }
                         charMsgReadyBuf = null;
                     }
                 }
 
-                if( (System.currentTimeMillis()- lastCpuTempSend)>cpuTempSendPeriod) {
-                    lastCpuTempSend = System.currentTimeMillis();
-                    //ftDev.write(String.format("%02d\r\n", (int) cpuTemp).getBytes());
-                    ftDev.write(String.format("t=%d\n", getBatteryTemp()).getBytes());
 
-                    //appendTextToTextView("2s\n");
-//                        if((udpSocket != null) && (serverAddr != null)){
-//                            try {
-//                                String str = new String("test");
-//                                DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), serverAddr, 8059);
-//                                udpSocket.send(packet);
-//                                //appendTextToTextView("send ok\n");
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
+//                if( (System.currentTimeMillis()- lastCpuTempSend)>cpuTempSendPeriod) {
+//                    lastCpuTempSend = System.currentTimeMillis();
+//                    //ftDev.write(String.format("%02d\r\n", (int) cpuTemp).getBytes());
+//                    ftDev.write(String.format("t=%d\n", getBatteryTemp()).getBytes());
+//
+//                    //appendTextToTextView("2s\n");
+////                        if((udpSocket != null) && (serverAddr != null)){
+////                            try {
+////                                String str = new String("test");
+////                                DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), serverAddr, 8059);
+////                                udpSocket.send(packet);
+////                                //appendTextToTextView("send ok\n");
+////                            } catch (IOException e) {
+////                                e.printStackTrace();
+////                            }
+////                        }
                 }
-            }
+////            }
         }
     }
 
@@ -129,4 +145,10 @@ public class FtReadThread extends Thread {
         return iBatteryTemp;
     }
 
+    void appendReceiver(ReceiverParams rp)
+    {
+        if(recvsList.contains(rp)==false) {
+            recvsList.add(rp);
+        }
+    }
 }
