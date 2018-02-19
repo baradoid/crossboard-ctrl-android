@@ -57,9 +57,10 @@ public class UdpServerThread extends Thread{
                 //updatePrompt("Request from: " + address + ":" + port + "\n");
 
                 String msg = new String(packet.getData(), 0, packet.getLength());
-                Message m = msgHandler.obtainMessage();
-                m.obj = msg;
-                msgHandler.sendMessage(m);
+                Message m;
+//                Message m = msgHandler.obtainMessage();
+//                m.obj = msg;
+//                msgHandler.sendMessage(m);
 
 
 

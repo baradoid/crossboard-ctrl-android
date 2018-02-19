@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 /**
  * Created by murinets on 19.02.2018.
@@ -37,14 +38,16 @@ public class FtReadThread extends Thread {
     volatile int iPluginVer = 0x0914;
     private int cashCount = 0;
 
-    List<ReceiverParams> recvsList = Collections.synchronizedList(new ArrayList<ReceiverParams>());
+    Semaphore dataChangeSem;
+    CrossBoardData cbData;
 
-
-    FtReadThread(FT_Device ft, Handler h){
+    FtReadThread(FT_Device ft, Handler h, Semaphore semaphore, CrossBoardData cbData){
         mHandler = h;
         //this.setPriority(Thread.MIN_PRIORITY);
         bReadThreadGoing = true;
         ftDev = ft;
+        dataChangeSem = semaphore;
+        this.cbData = cbData;
     }
 
     @Override
@@ -65,16 +68,7 @@ public class FtReadThread extends Thread {
         int cpuTempSendPeriod = 2000;
 
         ftDev.setLatencyTimer((byte)1);
-        DatagramSocket udpSocket = null;
-        try {
-            udpSocket = new DatagramSocket();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            Message message = mHandler.obtainMessage(0, e.toString());
-            mHandler.sendMessage(message);
 
-        }
 
         int iavail;
         while(true == bReadThreadGoing)
@@ -93,31 +87,17 @@ public class FtReadThread extends Thread {
                         if((charBuf[curMsgInd++] == '\n') || (curMsgInd >= 199)){
                             charMsgReadyBuf = new char[curMsgInd];
                             System.arraycopy(charBuf, 0, charMsgReadyBuf, 0, curMsgInd);
+                            cbData.lastString = new String(charMsgReadyBuf);
+                            dataChangeSem.release();
                             curMsgInd=0;
                         }
                     }
                     if(charMsgReadyBuf != null){
 //                        Message msg = mHandler.obtainMessage(0, new String(charMsgReadyBuf));
 //                        mHandler.sendMessage(msg);
-                        
-                        if((udpSocket != null) && (recvsList.isEmpty()==false)) {
-                            String str = new String(charMsgReadyBuf);
-                            DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length());
-                            try {
-                                for (ReceiverParams rp : recvsList) {
-                                    packet.setAddress(rp.addr);
-                                    packet.setPort(rp.port);
-                                    udpSocket.send(packet);
-                                }
-                            }
-                            catch(IOException e){
-
-                            }
-                        }
                         charMsgReadyBuf = null;
                     }
                 }
-
 
 //                if( (System.currentTimeMillis()- lastCpuTempSend)>cpuTempSendPeriod) {
 //                    lastCpuTempSend = System.currentTimeMillis();
@@ -145,10 +125,9 @@ public class FtReadThread extends Thread {
         return iBatteryTemp;
     }
 
-    void appendReceiver(ReceiverParams rp)
+
+    void parseString(String str)
     {
-        if(recvsList.contains(rp)==false) {
-            recvsList.add(rp);
-        }
+
     }
 }

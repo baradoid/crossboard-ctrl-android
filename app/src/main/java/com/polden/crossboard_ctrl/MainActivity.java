@@ -4,26 +4,18 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.SocketException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.concurrent.Semaphore;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,8 +33,10 @@ public class MainActivity extends AppCompatActivity {
     DeviceScanThread devScanThread = null;
     UdpServerThread udpServThr = null;
 
+    UdpSenderThread udpSendThr = null;
 
-    DatagramSocket udpSocket = null;
+    Semaphore dataChangeSem = new Semaphore(0);
+    CrossBoardData cbData = new CrossBoardData();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,21 +47,17 @@ public class MainActivity extends AppCompatActivity {
         //rescanFt();
 
         //System.out.println("init ok\n");
+        cbData.lastString = new String ("1287 1FFF -990 0015 0000 DD 000 000 000 000000");
         devScanThread = new DeviceScanThread(handler1);
         devScanThread.start();
 
         udpServThr = new UdpServerThread(8055, udpMsgHandler);
         udpServThr.start();
 
-        try {
-            udpSocket = new DatagramSocket();
-//            Message m = udpMsgHandler.obtainMessage();
-//            m.obj = new String("udpSocket init Ok\n");
-//            udpMsgHandler.sendMessage(m);
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+        udpSendThr = new UdpSenderThread(dataChangeSem, cbData);
+        udpSendThr.start();
+
+
     }
 
 
@@ -129,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
                     ftDev.setFlowControl(D2xxManager.FT_FLOW_NONE, (byte)0x0b, (byte)0x0d);
 
                     if(ftReadThread == null){
-                        ftReadThread = new FtReadThread(ftDev, ftMsgHandler);
+                        ftReadThread = new FtReadThread(ftDev, ftMsgHandler, dataChangeSem, cbData);
                         ftReadThread.start();
                     }
                 }
@@ -268,8 +258,13 @@ public class MainActivity extends AppCompatActivity {
             }
             else if(msg.obj.getClass().equals(ReceiverParams.class)){
                 ReceiverParams rp = (ReceiverParams) msg.obj;
-                appendTextToTextView("registr: " + rp.addr.toString() + ",  port:" + rp.port + "\n");
-                ftReadThread.appendReceiver(rp);
+                boolean bExists = !udpSendThr.appendReceiver(rp);
+                String m = new String("registr: " + rp.addr.toString() + ",  port:" + rp.port + "  ");
+                m += (bExists?"exists":"");
+                m += "\n";
+                appendTextToTextView(m);
+
+
             }
 
         }
