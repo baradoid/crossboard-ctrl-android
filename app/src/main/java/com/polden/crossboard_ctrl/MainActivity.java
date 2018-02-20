@@ -108,8 +108,9 @@ public class MainActivity extends AppCompatActivity {
                     D2xxManager.FtDeviceInfoListNode fdiln = ftDev.getDeviceInfo();
                     //System.out.println(String.format("device desc: %s\n sn: %s\n", fdiln.description, fdiln.serialNumber));
                     //appendTextToTextView(String.format("device desc: %s\n sn: %s\n", fdiln.description, fdiln.serialNumber));
-                    final TextView textViewDescr = (TextView)findViewById(R.id.textViewDevName);
-                    textViewDescr.setText("description: " + fdiln.description + "\nserialNumber: " + fdiln.serialNumber);
+                    //final TextView textViewDescr = (TextView)findViewById(R.id.textViewDevName);
+                    //textViewDescr.setText("description: " + fdiln.description + "\nserialNumber: " + fdiln.serialNumber);
+                    appendTextToTextView("description: " + fdiln.description + "\nserialNumber: " + fdiln.serialNumber);
 
                     // Set Baud Rate
                     ftDev.setBaudRate(115200);
@@ -198,16 +199,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg)
         {
-//            if(iavailable > 0)
-//            {
-//                readText.append(String.copyValueOf(readDataToText, 0, iavailable));
-//            }
-            //lastString = (String) msg.obj;
-
-            appendTextToTextView(cbData.lastString);
-
-            System.out.println("> " + cbData.lastString);
-
+            if(msg.what == 33){
+                final TextView tv = (TextView)findViewById(R.id.textView);
+                tv.setText(cbData.lastString);
+                appendTextToTextView(cbData.lastString);
+            }
         }
     };
 
@@ -237,6 +233,15 @@ public class MainActivity extends AppCompatActivity {
                 m += (bExists?"exists":"");
                 m += "\n";
                 appendTextToTextView(m);
+                if(bExists == false){
+                    final TextView tv = (TextView)findViewById(R.id.textViewClientList);
+                    String clientListStr = new String("Client list:\n");
+                    for (int i=0; i< udpSendThr.recvsList.size(); i++) {
+                        ReceiverParams r = udpSendThr.recvsList.get(i);
+                        clientListStr += "" + i +": " + r.addr +":" + r.port + "\n";
+                    }
+                    tv.setText(clientListStr);
+                }
 
 //                if(bExists)
 //                    dataChangeSem.release(100);

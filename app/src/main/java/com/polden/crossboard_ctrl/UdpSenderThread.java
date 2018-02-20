@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class UdpSenderThread extends Thread {
     Semaphore sem;
-    final List<ReceiverParams> recvsList = Collections.synchronizedList(new ArrayList<ReceiverParams>());
+    public final List<ReceiverParams> recvsList = Collections.synchronizedList(new ArrayList<ReceiverParams>());
     CrossBoardData cbData;
 
     UdpSenderThread(Semaphore semaphore, CrossBoardData cbData){
@@ -57,7 +57,7 @@ public class UdpSenderThread extends Thread {
         ByteBuffer bbuf;
         bbuf = ByteBuffer.allocate(11); //2+2+1+1+1+2
         DatagramPacket packet = new DatagramPacket(bbuf.array(), bbuf.array().length);
-        cbData.parseCmdString();
+        //cbData.parseCmdString();
         while(true){
             try{
                 sem.acquire(); //change to drain

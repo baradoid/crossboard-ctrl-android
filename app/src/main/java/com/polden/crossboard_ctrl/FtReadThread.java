@@ -88,13 +88,14 @@ public class FtReadThread extends Thread {
                             charMsgReadyBuf = new char[curMsgInd];
                             System.arraycopy(charBuf, 0, charMsgReadyBuf, 0, curMsgInd);
                             cbData.lastString = new String(charMsgReadyBuf);
+                            cbData.parseCmdString();
                             dataChangeSem.release();
                             curMsgInd=0;
                         }
                     }
                     if(charMsgReadyBuf != null){
-//                        Message msg = mHandler.obtainMessage(0, new String(charMsgReadyBuf));
-//                        mHandler.sendMessage(msg);
+                        Message m = mHandler.obtainMessage(33, new String(charMsgReadyBuf));
+                        mHandler.sendMessage(m);
                         charMsgReadyBuf = null;
                     }
                 }
