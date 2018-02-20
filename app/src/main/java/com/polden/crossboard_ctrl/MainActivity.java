@@ -1,5 +1,6 @@
 package com.polden.crossboard_ctrl;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -19,17 +20,12 @@ import java.util.concurrent.Semaphore;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static D2xxManager ftD2xx = null;
-    FT_Device ftDev = null;
-    public static int devCount = 0;
-    public static int ftConnTryCnt = 0;
-
     //public int readcount = 0;
     //public int iavailable = 0;
     //byte[] readData;
     //char[] readDataToText;
 
-    FtReadThread ftReadThread = null;
+
     DeviceScanThread devScanThread = null;
     UdpServerThread udpServThr = null;
 
@@ -48,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
         //System.out.println("init ok\n");
         cbData.lastString = new String ("1287 1FFF -990 0015 0000 DD 000 000 000 000000");
-        devScanThread = new DeviceScanThread(handler1);
+        devScanThread = new DeviceScanThread(this, handler, dataChangeSem, cbData);
         devScanThread.start();
 
         udpServThr = new UdpServerThread(8055, udpMsgHandler);
@@ -57,87 +53,32 @@ public class MainActivity extends AppCompatActivity {
         udpSendThr = new UdpSenderThread(dataChangeSem, cbData);
         udpSendThr.start();
 
+        handler.sendMessage(handler.obtainMessage(0, "Init ok"));
+        //appendTextToTextView("Init ok");
+
 
     }
 
-
-    public void onRefresh(View v)
-    {
-        //System.out.println(String.format("but pressed\n", ftConnTryCnt));
-        rescanFt();
-    }
+//
+//    public void onRefresh(View v)
+//    {
+//        //System.out.println(String.format("but pressed\n", ftConnTryCnt));
+//        rescanFt();
+//    }
 
     public void onFanEna(View v)
     {
 
-        appendTextToTextView("onFanEna\n");
-        if (ftDev != null) {
-            synchronized(ftDev) {
-                String cmd = new String("fanOn\n");
-                ftDev.write(cmd.getBytes());
-            }
-        }
+//        appendTextToTextView("onFanEna\n");
+//        if (ftDev != null) {
+//            synchronized(ftDev) {
+//                String cmd = new String("fanOn\n");
+//                ftDev.write(cmd.getBytes());
+//            }
+//        }
     }
 
-    public void rescanFt()
-    {
-        ftConnTryCnt++;
 
-        try {
-            //System.out.println(String.format("ft scan try %d\n", ftConnTryCnt));
-            //appendTextToTextView(String.format("ft scan try %d\n", ftConnTryCnt));
-            try {
-// Get FT_Device and Open the port
-                if(ftDev != null)
-                    return;
-
-                if(ftD2xx == null)
-                    ftD2xx = D2xxManager.getInstance(this);
-                devCount = ftD2xx.createDeviceInfoList(this);
-
-                //System.out.println(String.format("devCount: %d\n", devCount));
-                //appendTextToTextView(String.format("devCount: %d\n", devCount));
-                for (int i = 0; i < devCount; i++) {
-                    ftDev = ftD2xx.openByIndex(this, i);
-
-                    if ((ftDev != null) && (ftDev.isOpen() == true))
-                        break;
-                }
-////////// Configure the port to UART
-                if ((ftDev != null) && (ftDev.isOpen() == true)) {
-                    D2xxManager.FtDeviceInfoListNode fdiln = ftDev.getDeviceInfo();
-                    //System.out.println(String.format("device desc: %s\n sn: %s\n", fdiln.description, fdiln.serialNumber));
-                    //appendTextToTextView(String.format("device desc: %s\n sn: %s\n", fdiln.description, fdiln.serialNumber));
-                    //final TextView textViewDescr = (TextView)findViewById(R.id.textViewDevName);
-                    //textViewDescr.setText("description: " + fdiln.description + "\nserialNumber: " + fdiln.serialNumber);
-                    appendTextToTextView("description: " + fdiln.description + "\nserialNumber: " + fdiln.serialNumber);
-
-                    // Set Baud Rate
-                    ftDev.setBaudRate(115200);
-                    ftDev.setDataCharacteristics(D2xxManager.FT_DATA_BITS_8,
-                            D2xxManager.FT_STOP_BITS_1,
-                            D2xxManager.FT_PARITY_NONE);
-                    ftDev.setFlowControl(D2xxManager.FT_FLOW_NONE, (byte)0x0b, (byte)0x0d);
-
-                    if(ftReadThread == null){
-                        ftReadThread = new FtReadThread(ftDev, ftMsgHandler, dataChangeSem, cbData);
-                        ftReadThread.start();
-                    }
-                }
-                else {
-                    //System.out.println("no ft device open\n");
-                    //appendTextToTextView("no ft device open\n");
-                }
-            } catch (D2xxManager.D2xxException ex) {
-                ex.printStackTrace();
-                ftDev.close();
-            }
-        }
-        catch(Exception e){
-            e.printStackTrace();
-            //System.out.println(e.getMessage());
-        }
-    }
 
     void appendTextToTextView(String str)
     {
@@ -159,53 +100,60 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    final Handler handler1 =  new Handler()
+    final Handler handler =  new Handler()
     {
         @Override
         public void handleMessage(Message msg)
         {
-            //appendTextToTextView( (String) msg.obj);
-        }
-    };
+            try {
+                TextView tv;
+                switch (msg.what) {
+                    case 0:
+                        appendTextToTextView((String) msg.obj);
+                        break;
 
-    private class DeviceScanThread  extends Thread
-    {
-        Handler mHandler;
+                    case 10:
+                        tv = (TextView) findViewById(R.id.textViewCounter);
+                        tv.setText((String) msg.obj);
+                        break;
+                    case 20:
+                        tv = (TextView) findViewById(R.id.textViewCounterFtThread);
+                        tv.setText((String) msg.obj);
+                        break;
 
-        DeviceScanThread(Handler h) {
-            mHandler = h;
-        }
-
-        @Override
-        public void run()
-        {
-            int i=0;
-            while(true) {
-
-                mHandler.sendMessage(mHandler.obtainMessage(0, new String("iter " + i++ + "\n")));
-                rescanFt();
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
             }
-        }
-    }
-
-
-    final Handler ftMsgHandler =  new Handler()
-    {
-        @Override
-        public void handleMessage(Message msg)
-        {
-            if(msg.what == 33){
-                final TextView tv = (TextView)findViewById(R.id.textView);
-                tv.setText(cbData.lastString);
-                appendTextToTextView(cbData.lastString);
+            catch (Exception e){
+                e.printStackTrace();
             }
         }
     };
+
+
+
+
+//    final Handler ftMsgHandler =  new Handler()
+//    {
+//        @Override
+//        public void handleMessage(Message msg)
+//        {
+//            switch(msg.what){
+//                case 33:
+//                //final TextView tv = (TextView)findViewById(R.id.textView);
+//                //tv.setText(cbData.lastString);
+//                String s = (String) msg.obj;
+//                appendTextToTextView(s);
+//                    break;
+//                case 22:
+//                    final TextView tv = (TextView)findViewById(R.id.textView3);
+//                    tv.setText((String) msg.obj);
+//                    break;
+//
+//            }
+//
+//
+//        }
+//    };
 
 
     final Handler udpMsgHandler = new Handler(){
@@ -218,13 +166,13 @@ public class MainActivity extends AppCompatActivity {
             if(msg.obj.getClass().equals(String.class)){
                 String m = (String)msg.obj;
                 appendTextToTextView(m);
-                if(ftDev != null) {
-                    synchronized(ftDev) {
-                        if (ftDev.isOpen()) {
-                            ftDev.write(m.getBytes());
-                        }
-                    }
-                }
+//                if(ftDev != null) {
+//                    synchronized(ftDev) {
+//                        if (ftDev.isOpen()) {
+//                            ftDev.write(m.getBytes());
+//                        }
+//                    }
+//                }
             }
             else if(msg.obj.getClass().equals(ReceiverParams.class)){
                 ReceiverParams rp = (ReceiverParams) msg.obj;
@@ -243,13 +191,22 @@ public class MainActivity extends AppCompatActivity {
                     tv.setText(clientListStr);
                 }
 
-//                if(bExists)
-//                    dataChangeSem.release(100);
+                if(bExists)
+                    dataChangeSem.release(100);
 
 
             }
 
         }
     };
+
+//
+//    public void rescanFt()
+//    {
+//
+//    }
+
+//    private class DeviceScanThread  extends Thread
+//    {
 
 }

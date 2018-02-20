@@ -57,16 +57,17 @@ public class UdpSenderThread extends Thread {
         ByteBuffer bbuf;
         bbuf = ByteBuffer.allocate(11); //2+2+1+1+1+2
         DatagramPacket packet = new DatagramPacket(bbuf.array(), bbuf.array().length);
-        //cbData.parseCmdString();
+
         while(true){
             try{
                 sem.acquire(); //change to drain
-                sem.drainPermits();
+                //sem.drainPermits();
 
                 synchronized(recvsList) {
                     if ((udpSocket != null) && (recvsList.isEmpty() == false)) {
                         //ArrayList<byte> bbuf = new ArrayList<byte>();
 
+                        //cbData.parseCmdString();
                         //cbData.pos2++;
                         bbuf.rewind();
                         bbuf.putShort(cbData.pos1);

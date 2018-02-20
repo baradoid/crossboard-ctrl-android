@@ -71,34 +71,42 @@ public class FtReadThread extends Thread {
 
 
         int iavail;
-        while(true == bReadThreadGoing)
-        {
-            synchronized(ftDev)
-            {
-                iavail = ftDev.getQueueStatus();
-                if(iavail > 0){
-                    if(iavail > readLength){
-                        iavail = readLength;
+        int iter = 0;
+        try {
+            while (true == bReadThreadGoing) {
+                synchronized (ftDev) {
+                    iavail = ftDev.getQueueStatus();
+                    if (iavail > 0) {
+                        if (iavail > readLength) {
+                            iavail = readLength;
+                        }
+                        ftDev.read(dataBuf, iavail);
                     }
-                    ftDev.read(dataBuf, iavail);
-
-                    for (int i = 0; i < iavail; i++) {
-                        charBuf[curMsgInd] = (char)dataBuf[i];
-                        if((charBuf[curMsgInd++] == '\n') || (curMsgInd >= 199)){
-                            charMsgReadyBuf = new char[curMsgInd];
-                            System.arraycopy(charBuf, 0, charMsgReadyBuf, 0, curMsgInd);
-                            cbData.lastString = new String(charMsgReadyBuf);
-                            cbData.parseCmdString();
-                            dataChangeSem.release();
-                            curMsgInd=0;
+                    else{
+                        if(ftDev.isOpen() == false){
+                            break;
                         }
                     }
-                    if(charMsgReadyBuf != null){
-                        Message m = mHandler.obtainMessage(33, new String(charMsgReadyBuf));
-                        mHandler.sendMessage(m);
-                        charMsgReadyBuf = null;
+                }
+
+
+                for (int i = 0; i < iavail; i++) {
+                    charBuf[curMsgInd] = (char) dataBuf[i];
+                    if ((charBuf[curMsgInd++] == '\n') || (curMsgInd >= 199)) {
+                        charMsgReadyBuf = new char[curMsgInd];
+                        System.arraycopy(charBuf, 0, charMsgReadyBuf, 0, curMsgInd);
+                        cbData.lastString = new String(charMsgReadyBuf);
+                        cbData.parseCmdString();
+                        dataChangeSem.release();
+                        curMsgInd = 0;
                     }
                 }
+                if (charMsgReadyBuf != null) {
+                    Message m = mHandler.obtainMessage(0, new String(charMsgReadyBuf));
+                    mHandler.sendMessage(m);
+                    charMsgReadyBuf = null;
+                }
+
 
 //                if( (System.currentTimeMillis()- lastCpuTempSend)>cpuTempSendPeriod) {
 //                    lastCpuTempSend = System.currentTimeMillis();
@@ -116,9 +124,24 @@ public class FtReadThread extends Thread {
 ////                                e.printStackTrace();
 ////                            }
 ////                        }
-                }
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+
+                    }
+
 ////            }
+
+//            Message m = mHandler.obtainMessage(20, new String("iter " + iter++));
+//            mHandler.sendMessage(m);
+
+            }
         }
+        catch(Exception e){
+            mHandler.sendMessage(mHandler.obtainMessage(0, new String("FtReadThread: " + e.toString()+ "\n")));
+        }
+        mHandler.sendMessage(mHandler.obtainMessage(0, new String("FtReadThread: finish\n")));
     }
 
 
@@ -126,9 +149,4 @@ public class FtReadThread extends Thread {
         return iBatteryTemp;
     }
 
-
-    void parseString(String str)
-    {
-
-    }
 }
