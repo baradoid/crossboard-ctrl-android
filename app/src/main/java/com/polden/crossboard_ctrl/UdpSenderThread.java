@@ -5,6 +5,7 @@ import android.os.Message;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +39,9 @@ public class UdpSenderThread extends Thread {
     }
 
 
+
+
+
     @Override
     public void run() {
         super.run();
@@ -50,13 +54,30 @@ public class UdpSenderThread extends Thread {
             e.printStackTrace();
         }
 
+        ByteBuffer bbuf;
+        bbuf = ByteBuffer.allocate(11); //2+2+1+1+1+2
+        DatagramPacket packet = new DatagramPacket(bbuf.array(), bbuf.array().length);
+        cbData.parseCmdString();
         while(true){
             try{
                 sem.acquire(); //change to drain
+                sem.drainPermits();
 
                 synchronized(recvsList) {
                     if ((udpSocket != null) && (recvsList.isEmpty() == false)) {
-                        DatagramPacket packet = new DatagramPacket(cbData.lastString.getBytes(), cbData.lastString.length());
+                        //ArrayList<byte> bbuf = new ArrayList<byte>();
+
+                        //cbData.pos2++;
+                        bbuf.rewind();
+                        bbuf.putShort(cbData.pos1);
+                        bbuf.putShort(cbData.pos2);
+                        bbuf.put(cbData.distance);
+                        bbuf.put(cbData.headTemp);
+                        bbuf.put(cbData.batteryTemp);
+                        bbuf.putInt(cbData.cashCount);
+
+                        //packet = new DatagramPacket(bbuf.array(), bbuf.array().length);
+
                         try {
                             for (ReceiverParams rp : recvsList) {
                                 packet.setAddress(rp.addr);
@@ -64,6 +85,7 @@ public class UdpSenderThread extends Thread {
                                 udpSocket.send(packet);
                             }
                         } catch (IOException e) {
+                            e.printStackTrace();
 
                         }
                     }

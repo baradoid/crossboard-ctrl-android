@@ -2,10 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://C:\dev\polden-binoc\crossboard-ctrl-android-proj2\Crossboard-ctrl-android-proj.iml" filepath="C:\dev\polden-binoc\crossboard-ctrl-android-proj2\Crossboard-ctrl-android-proj.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://C:\dev\polden-binoc\crossboard-ctrl-android-proj2\app\app.iml" filepath="C:\dev\polden-binoc\crossboard-ctrl-android-proj2\app\app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/crossboard-ctrl-android-proj2.iml" filepath="$PROJECT_DIR$/crossboard-ctrl-android-proj2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/crossboard-ctrl-android-proj1.iml" filepath="$PROJECT_DIR$/crossboard-ctrl-android-proj1.iml" />
     </modules>
   </component>
 </project>

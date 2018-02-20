@@ -57,23 +57,24 @@ public class UdpServerThread extends Thread{
                 //updatePrompt("Request from: " + address + ":" + port + "\n");
 
                 String msg = new String(packet.getData(), 0, packet.getLength());
-                Message m;
-//                Message m = msgHandler.obtainMessage();
-//                m.obj = msg;
-//                msgHandler.sendMessage(m);
+                //Message m;
+                Message m = msgHandler.obtainMessage();
+
 
 
 
                 switch (msg){
                     case "reg\n":
                         //Log.d(" Received cmd", "Reg");
-                        m = msgHandler.obtainMessage();
+                        //m = msgHandler.obtainMessage();
                         ReceiverParams rp = new ReceiverParams((Inet4Address) packet.getAddress(), packet.getPort());
 
                         m.obj = rp;
                         msgHandler.sendMessage(m);
                         break;
                     default: //Log.e(TAG, msg);
+                        m.obj = msg;
+                        msgHandler.sendMessage(m);
                         break;
 
 

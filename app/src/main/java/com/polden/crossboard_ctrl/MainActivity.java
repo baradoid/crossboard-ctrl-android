@@ -142,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
     {
         final TextView editText = (TextView)findViewById(R.id.textView);
 
-        DateFormat formatter = new SimpleDateFormat("HH-MM-ss:SSS");
+        DateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
         String time = formatter.format(new Date());
 
         editText.append(time +"> " + str);
@@ -155,16 +155,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    volatile public static String lastString = new String("N/A\r\n");
-    private volatile int xPos = 0;
-    private volatile int yPos = 0;
 
-    //volatile int iCpuTemp = -1488;
-    volatile int iBatteryTemp = -1488;
-    volatile int iHeadTemp = -1488;
-    volatile int iDistance = -1;
-    volatile int iPluginVer = 0x0914;
-    private int cashCount = 0;
 
 
     final Handler handler1 =  new Handler()
@@ -211,29 +202,12 @@ public class MainActivity extends AppCompatActivity {
 //            {
 //                readText.append(String.copyValueOf(readDataToText, 0, iavailable));
 //            }
-            lastString = (String) msg.obj;
+            //lastString = (String) msg.obj;
 
-            appendTextToTextView(lastString);
+            appendTextToTextView(cbData.lastString);
 
-            System.out.println("> " + lastString);
-            try {
-                xPos = Integer.parseInt(lastString.substring(0, 4), 16);
-                yPos = Integer.parseInt(lastString.substring(5, 9), 16);
-                iHeadTemp = Integer.parseInt(lastString.substring(10, 14), 10);
-                iDistance = Integer.parseInt(lastString.substring(15, 19), 10);
-                cashCount = Integer.parseInt(lastString.substring(40, 46), 10);
-//                for(ReceiverParams rp : recvsList){
-//                    String str = new String(lastString);
-//                    DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), rp.addr, rp.port);
-//                    udpSocket.send(packet);
-//                }
-            }
-//            catch (IOException e) {
-//                e.printStackTrace();
-//            }
-            catch (Exception e) {
+            System.out.println("> " + cbData.lastString);
 
-            }
         }
     };
 
@@ -263,6 +237,9 @@ public class MainActivity extends AppCompatActivity {
                 m += (bExists?"exists":"");
                 m += "\n";
                 appendTextToTextView(m);
+
+//                if(bExists)
+//                    dataChangeSem.release(100);
 
 
             }
