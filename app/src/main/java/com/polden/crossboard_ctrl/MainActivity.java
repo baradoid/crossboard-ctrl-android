@@ -1,6 +1,8 @@
 package com.polden.crossboard_ctrl;
 
 import android.content.Context;
+import android.os.AsyncTask;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -16,6 +18,8 @@ import java.net.DatagramSocket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 
 public class MainActivity extends AppCompatActivity {
@@ -24,8 +28,6 @@ public class MainActivity extends AppCompatActivity {
     //public int iavailable = 0;
     //byte[] readData;
     //char[] readDataToText;
-
-
     DeviceScanThread devScanThread = null;
     UdpServerThread udpServThr = null;
 
@@ -33,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
 
     Semaphore dataChangeSem = new Semaphore(0);
     CrossBoardData cbData = new CrossBoardData();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,16 +50,17 @@ public class MainActivity extends AppCompatActivity {
         devScanThread = new DeviceScanThread(this, handler, dataChangeSem, cbData);
         devScanThread.start();
 
-        udpServThr = new UdpServerThread(8055, udpMsgHandler);
+        udpServThr = new UdpServerThread(8055, handler);
         udpServThr.start();
 
         udpSendThr = new UdpSenderThread(dataChangeSem, cbData);
         udpSendThr.start();
 
-        handler.sendMessage(handler.obtainMessage(0, "Init ok"));
+
         //appendTextToTextView("Init ok");
 
-
+        new updateUiThread(cbData, handler).start();
+        handler.sendMessage(handler.obtainMessage(0, "Init ok\n"));
     }
 
 //
@@ -113,14 +117,44 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                     case 10:
-                        tv = (TextView) findViewById(R.id.textViewCounter);
-                        tv.setText((String) msg.obj);
+//                        tv = (TextView) findViewById(R.id.textViewCounter);
+//                        tv.setText((String) msg.obj);
                         break;
                     case 20:
-                        tv = (TextView) findViewById(R.id.textViewCounterFtThread);
-                        tv.setText((String) msg.obj);
+                        //tv = (TextView) findViewById(R.id.textViewCounterFtThread);
+                        //tv.setText((String) msg.obj);
+                        break;
+                    case 30:
+                        ReceiverParams rp = (ReceiverParams) msg.obj;
+                        boolean bExists = !udpSendThr.appendReceiver(rp);
+                        String m = new String("registr client: " + rp.addr.toString() + ":" + rp.port + "  ");
+                        m += (bExists?"exists":"");
+                        m += "\n";
+                        appendTextToTextView(m);
+                        if(bExists == false){
+                            tv = (TextView)findViewById(R.id.textViewClientList);
+                            String clientListStr = new String("Client list:\n");
+                            for (int i=0; i< udpSendThr.recvsList.size(); i++) {
+                                ReceiverParams r = udpSendThr.recvsList.get(i);
+                                clientListStr += "" + i +": " + r.addr +":" + r.port + "\n";
+                            }
+                            tv.setText(clientListStr);
+                        }
+
+//                        if(bExists)
+//                            dataChangeSem.release(100);
+
                         break;
 
+
+                    case 70:
+                        tv = (TextView) findViewById(R.id.TextViewCbParams);
+                        tv.setText((String)msg.obj);
+                        break;
+                    case 71:
+                        tv = (TextView) findViewById(R.id.TextViewReleState);
+                        tv.setText((String)msg.obj);
+                        break;
                 }
             }
             catch (Exception e){
@@ -155,58 +189,5 @@ public class MainActivity extends AppCompatActivity {
 //        }
 //    };
 
-
-    final Handler udpMsgHandler = new Handler(){
-        @Override
-        public void handleMessage(Message msg) {
-
-            //Log.d(" Received msg", msg.obj.getClass().toString());
-            //appendTextToTextView(msg.obj.getClass().toString());
-
-            if(msg.obj.getClass().equals(String.class)){
-                String m = (String)msg.obj;
-                appendTextToTextView(m);
-//                if(ftDev != null) {
-//                    synchronized(ftDev) {
-//                        if (ftDev.isOpen()) {
-//                            ftDev.write(m.getBytes());
-//                        }
-//                    }
-//                }
-            }
-            else if(msg.obj.getClass().equals(ReceiverParams.class)){
-                ReceiverParams rp = (ReceiverParams) msg.obj;
-                boolean bExists = !udpSendThr.appendReceiver(rp);
-                String m = new String("registr: " + rp.addr.toString() + ",  port:" + rp.port + "  ");
-                m += (bExists?"exists":"");
-                m += "\n";
-                appendTextToTextView(m);
-                if(bExists == false){
-                    final TextView tv = (TextView)findViewById(R.id.textViewClientList);
-                    String clientListStr = new String("Client list:\n");
-                    for (int i=0; i< udpSendThr.recvsList.size(); i++) {
-                        ReceiverParams r = udpSendThr.recvsList.get(i);
-                        clientListStr += "" + i +": " + r.addr +":" + r.port + "\n";
-                    }
-                    tv.setText(clientListStr);
-                }
-
-                if(bExists)
-                    dataChangeSem.release(100);
-
-
-            }
-
-        }
-    };
-
-//
-//    public void rescanFt()
-//    {
-//
-//    }
-
-//    private class DeviceScanThread  extends Thread
-//    {
 
 }

@@ -4,7 +4,7 @@ package com.polden.crossboard_ctrl;
  * Created by Dmitry on 20.02.2018.
  */
 
-public class CrossBoardData {
+public class CrossBoardData implements Cloneable{
     String lastString;
 
     //volatile public static String lastString = new String("N/A\r\n");
@@ -46,5 +46,9 @@ public class CrossBoardData {
 //        pos2 = 0x3344;
 //        distance = 0x77;
 //        headTemp = 0x44;
+    }
+
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 }
